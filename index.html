@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vape Məhsul Kataloqu</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', Arial, sans-serif;
+            background: linear-gradient(135deg, #0f0b0b 0%, #3b0f0f 100%);
+            min-height: 100vh;
+            color: #fff;
+            -webkit-font-smoothing:antialiased;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+        /* -- Category Grid -- */
+        .category-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 14px;
+            padding: 10px 0;
+        }
+        .product-card {
+            background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
+            border-radius: 14px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform .25s ease, box-shadow .25s ease;
+            border: 1px solid rgba(255,255,255,0.06);
+            position: relative;
+            padding-bottom: 8px;
+            display:flex; flex-direction:column; align-items:center;
+        }
+        .product-card:hover { transform: translateY(-6px) scale(1.02); box-shadow: 0 12px 30px rgba(0,0,0,0.6); }
+        .product-image { width:100%; height:140px; object-fit:cover; background:rgba(255,255,255,0.03); border-bottom:1px solid rgba(255,255,255,0.03);} 
+        .product-info{ padding:10px; text-align:center; width:100%; }
+        .product-name{ color:#fff; font-size:13px; font-weight:700; text-transform:uppercase; margin-bottom:4px; }
+        .product-price{ color:#ffd24d; font-weight:800; }
+
+        /* -- Detail Page -- */
+        .detail-page { display:none; min-height:100vh; position:relative; }
+        .detail-overlay{ position:absolute; inset:0; background:linear-gradient(180deg, rgba(10,6,6,0.65), rgba(0,0,0,0.85)); z-index:0; }
+        .detail-content{ position:relative; z-index:2; padding:30px 20px; max-width:1100px; margin:0 auto; }
+
+        /* Navigation buttons (back, home, next) */
+        .nav-row{ display:flex; gap:12px; align-items:center; margin-bottom:22px; }
+        .nav-btn{
+            display:inline-flex; align-items:center; gap:8px;
+            background:linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03));
+            border:1px solid rgba(255,255,255,0.09);
+            color:#fff; padding:10px 14px; border-radius:12px; cursor:pointer;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+            backdrop-filter: blur(6px);
+            transition: transform .18s ease, background .18s ease;
+            font-weight:700;
+        }
+        .nav-btn:hover{ transform: translateY(-3px); background:rgba(255,255,255,0.12); color:#1a0000 }
+        .btn-ghost{ background:transparent; border:1px dashed rgba(255,255,255,0.06); }
+
+        /* circular icon only */
+        .nav-icon{
+            width:40px; height:40px; display:inline-grid; place-items:center; border-radius:10px; background:rgba(255,255,255,0.03);
+        }
+
+        .detail-header{ text-align:center; margin-bottom:22px; }
+        .detail-title{ color:#fff; font-size:46px; font-weight:800; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; opacity:0; transform:translateY(8px); }
+        .detail-sub{ color:#ffd24d; font-weight:700; opacity:.9; }
+
+        .detail-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:26px; margin-top:18px; }
+        .detail-section{ background:rgba(255,255,255,0.02); padding:18px; border-radius:12px; border:1px solid rgba(255,255,255,0.04); }
+        .detail-section h3{ color:#ffd24d; font-size:20px; text-transform:uppercase; margin-bottom:10px; }
+        .detail-list{ list-style:none; color:#fff; font-size:15px; line-height:1.6; }
+        .info-item{ color:#fff; font-size:16px; padding:6px 0; opacity:0; transform:translateY(8px); }
+        .info-label{ color:#ffd24d; font-weight:800; }
+
+        .warning-box{ background:rgba(255,0,0,0.12); border:1px solid rgba(255,0,0,0.22); padding:16px; border-radius:12px; text-align:center; margin-top:22px; }
+        .warning-text{ color:#ffd24d; font-size:18px; font-weight:800; }
+
+        /* media area */
+        .detail-media{ background:rgba(0,0,0,0.35); border-radius:12px; padding:10px; display:flex; align-items:center; justify-content:center; height:100%; min-height:320px; overflow:hidden; }
+        .media-img{ max-width:100%; max-height:100%; object-fit:contain; border-radius:8px; }
+        .media-video{ width:100%; height:100%; max-height:100%; border-radius:8px; }
+
+        /* Animations */
+        @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0);} }
+        @keyframes slideLeft { from { opacity:0; transform:translateX(30px);} to { opacity:1; transform:translateX(0);} }
+        @keyframes slideRight { from { opacity:0; transform:translateX(-30px);} to { opacity:1; transform:translateX(0);} }
+
+        .animate-in { animation: fadeUp .5s ease forwards; }
+        .animate-title { animation: fadeUp .55s cubic-bezier(.2,.9,.2,1) .08s forwards; }
+        .animate-info { animation: slideLeft .48s ease forwards; }
+
+        /* page transition classes (applied to .detail-content-inner) */
+        .content-inner { will-change: transform, opacity; }
+        .enter-left { animation: slideLeft .38s ease both; }
+        .enter-right { animation: slideRight .38s ease both; }
+        .exit-left { animation: slideRight .32s ease both reverse; }
+        .exit-right { animation: slideLeft .32s ease both reverse; }
+
+        /* responsive */
+        @media (max-width:800px) {
+            .detail-grid{ grid-template-columns:1fr; }
+            .detail-title{ font-size:30px; }
+            .product-image{ height:120px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Category Page -->
+        <div id="categoryPage" class="category-page">
+            <div class="category-grid" id="productGrid"></div>
+        </div>
+
+        <!-- Detail Page -->
+        <div id="detailPage" class="detail-page">
+            <div class="detail-overlay"></div>
+            <div class="detail-content">
+                <div class="nav-row">
+                    <button id="backBtn" class="nav-btn" onclick="navigatePrev()" aria-label="Geri"><span class="nav-label">Geri</span></button>
+                    <button id="homeBtn" class="nav-btn" onclick="navigateHome()" aria-label="Ana səhifə"><span class="nav-label">Ana səhifə</span></button>
+                    <button id="nextBtn" class="nav-btn" onclick="navigateNext()" aria-label="İrəli"><span class="nav-label">İrəli</span></button>
+                </div>
+
+                <div class="detail-header">
+                    <h1 id="detailTitle" class="detail-title">Məhsul</h1>
+                    <div id="detailSubtitle" class="detail-sub"></div>
+                </div>
+
+                <div class="detail-grid">
+                    <div class="detail-media" id="detailMedia">
+                        <!-- Image or video will be injected here -->
+                        <div id="mediaPlaceholder" style="text-align:center;color:rgba(255,255,255,0.6);">Məhsul media burada görünəcək</div>
+                    </div>
+
+                    <div>
+                        <div class="detail-section">
+                            <h3>Dadlar</h3>
+                            <ul class="detail-list" id="detailFlavors"></ul>
+                        </div>
+
+                        <div class="detail-section" style="margin-top:14px;">
+                            <h3>Məhsul Məlumatları</h3>
+                            <div id="detailInfo"></div>
+                        </div>
+
+                        <div class="warning-box" id="warningBox">
+                            <p class="warning-text" id="warningText"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- PRODUCTS JSON (added `media` field placeholders for images/videos) ---
+        const products = {
+    "products": [
+        {
+            "id": 1,
+            "name": "VOZOL STAR",
+            "price": "40,000",
+            "image": "1.jpg",
+            "details": [
+                "Qaragilə Nanə🫐🌿",
+                "Qaragilə qarpız🫐🍉",
+                "Üzüm Buz🍇❄️",
+                "Yemiş Saqqızı🍇✨",
+                "Yemiş Buz🍇❄️",
+                "Turş alma Buz🍏❄️",
+                "Çiyələk Buz🍓❄️",
+                "Çiyələk Kivi🍓🥝",
+                "Çiyələk Qarpız🍓🍉",
+                "Çiyələk, Qarpız və Şaftalı🍓🍉🍑",
+                "Enerji içkisi Redbull⚡",
+                "Qarpız saqqızı🍉💭",
+                "Qarpız, üzüm və boysen giləsi🍉🍇",
+                "Qarpız Turş Şaftalı🍉🍑🟡"
+            ],
+            "brand": "VOZOL",
+            "model": "Star 40,000",
+            "nicotine": "5%",
+            "modes": "2 Rejim Normal Və Power modu",
+            "normalPuffs": "40,000 Tüstüyə qədər Çəkim",
+            "powerPuffs": "25,000 Tüstüyə qədər Çəkim",
+            "price2": "35₼",
+            "warning": "Ələvə olaraq: 18 Yaşı Tamam olmamış şəxslərə satışı yoxdur 🚫"
+        },
+        {
+            "id": 2,
+            "name": "EONYS",
+            "price": "60,000",
+            "image": "2.png",
+            "details": [
+                "Freş Nanə 💨🧊",
+                "Sərin Qarpız🧊🍉",
+                "Çiyələk Mango🍓🥭",
+                "Çiyələk Kivi🍓🥝",
+                "Çiyələk Buz🍓🧊",
+                "Qarağat🫐",
+                "Qara Albalı ⚫🍒",
+                "Qarağat Qarpız Əjdaha meyvəsi🫐🍉",
+                "Aloe Üzüm 🍇🧃"
+            ],
+            "brand": "EONYS",
+            "model": "600K pro",
+            "nicotine": "5%",
+            "modes": "3 Rejim Econom, Normal Və Power modu",
+            "economPuffs": "60,000 Tüstüyə qədər Çəkim",
+            "normalPuffs": "40,000 Tüstüyə qədər Çəkim",
+            "powerPuffs": "20,000 Tüstüyə qədər Çəkim",
+            "price2": "38₼",
+            "warning": "Əlavə olaraq: 18 Yaşı Tamam olmamış şəxslərə satışı yoxdur 🙂"
+        },
+        {
+            "id": 3,
+            "name": "VOZOL NEON",
+            "price": "45,000",
+            "image": "3.jpg",
+            "details": [
+                "Buzlu Qarpız🍉❄️",
+                "Nənəli Saqqız🌬️🍭",
+                "Buzlu Qaragilə Moruq🫐🧊",
+                "Çiyələk Kivi🍓🥝",
+                "Banan Çiyələk🍌🍓",
+                "Buzlu Üzüm (qara)🍇❄️",
+                "Buzlu Alma❄️🍏🍎",
+                "Buzlu Şaftalı🍑❄️",
+                "Qaragilə Qarpız🫐🍉",
+                "Redbull Enerji⚡",
+                "Vişnə Çiyələk Qaragilə🍒🍓🫐",
+                "Ananaslı Cənnət🥭🧃",
+                "Moruq Qarpız Saqqızi🫐🍉🍬",
+                "Nanəli Gilemeyvə🌿🫐🍒",
+                "Şirin Portaxal Turş Marakuya🍊",
+                "Buzlu Zoğal❄️",
+                "Love 777 Saqqız💕",
+                "Albalı Cola🍒🧋",
+                "Qarışıq Giləmeyvlər🫐🍓",
+                "Pitaya Banan Vişnə🍌🍒",
+                "Qarpız Turş Şaftalı🍉🍋‍🟩🍑"
+            ],
+            "brand": "VOZOL",
+            "model": "Neon 45,000",
+            "nicotine": "4% - 6%",
+            "modes": "3 Rejim Econom və Power modu",
+            "normalPuffs": "",
+            "powerPuffs": "",
+            "price2": "36₼",
+            "features": "Xüsusi ayarlar ilə aromasından asılı olmayaraq istənilən şəkildə Buz səviyyəsini və nikotin səviyyəsini artıra bilərsiniz",
+            "warning": "Əlavə olaraq: 18 Yaşı Tamam olmamış şəxslərə satışı yoxdur 🙂"
+        },
+        {
+            "id": 4,
+            "name": "ELFBAR RAYA",
+            "price": "40,000",
+            "image": "4.jpg",
+            "details": [
+                
+                "Buzlu Nanə saqqız❄️🌿",
+                "buzlu şaftalı🍑❄️",
+                "Buzlu Qaragilə🫐❄️",
+                "Pitaya Banan Çiyələk🥭🍌🍓",
+                "Buzlu Böyürtkən🫐❄️",
+                "Üzüm Malina🍇🫐",
+                "Buzlu Qarpız🍉❄️",
+                "Çiyələk Kivi🍓🥝",
+                "Şaftalı Giləmeyvə🍑🫐",
+                "Ananas Manqo🍍🥭",
+                "İkiqat Mango🥭🥭",
+            ],
+            "brand": "ELFBAR",
+            "model": "Raya 40,000",
+            "nicotine": "5%",
+            "modes": "3 Rejim Econom Normal və Power",
+            "economPuffs": "40,000 Tüstüyə qədər Çəkim",
+            "normalPuffs": "",
+            "powerPuffs": "",
+            "price2": "35₼",
+            "warning": "Əlavə olaraq: 18 Yaşı Tamam olmamış şəxslərə satışı yoxdur 🙂"
+        },
+        {
+            "id": 5,
+            "name": "EONYS",
+            "price": "30,000",
+            "image": "5.jpg",
+            "details": [
+                "Sprite Limon🍋",
+                "Qarpız Saqqız🍉",
+                "Giləmeyvələrin Qarışığı🫐🍓",
+                "Qara Üzüm🍇",
+                "Limon Portağal Giləmeyvə🍋🍊🫐",
+                "Buzlu Ehtiras Meyvəsi❄️",
+                "Moruq Şaftalı Portağal🫐🍑🍊"
+            ],
+            "brand": "EONYS",
+            "model": "30,000",
+            "nicotine": "5%",
+            "modes": "3 Rejim Mövcuddur",
+            "normalPuffs": "",
+            "powerPuffs": "",
+            "price2": "33₼",
+            "warning": "Əlavə olaraq: 18 Yaşı Tamam olmamış şəxslərə satışı yoxdur 🙂"
+        },
+        {
+            "id": 6,
+            "name": "MON 8,000 PUFF",
+            "price": "8,000",
+            "image": "6.jpg",
+            "details": [
+                "Buzlu Qarpız🍉❄️",
+                "Buzlu Üzüm (Qara)🍇❄️",
+                "Ehtiras Meyvəsi🥭"
+            ],
+            "brand": "MON",
+            "model": "Mon 8,000",
+            "nicotine": "6%",
+            "modes": "1 Standart Rejim",
+            "normalPuffs": "",
+            "powerPuffs": "",
+            "price2": "21₼",
+            "warning": "Əlavə olaraq: 18 Yaşı Tamam olmamış şəxslərə satışı yoxdur 🙂"
+        },
+        {
+            "id": 7,
+            "name": "MEGA FOF",
+            "price": "25,000",
+            "image": "7.png",
+            "details": [
+                "Buzlu nanə🌿❄️",
+                "Çəhrayı limonad qaragilə🫐🍋",
+                "Kakos moruq buz🫐🥥❄️",
+                "Alma çiyələk banan🍏🍓🍌",
+                "Buzlu Coca cola🥤❄️"
+            ],
+            "brand": "FOF",
+            "model": "Mega 25,000",
+            "nicotine": "5%",
+            "modes": "2 Rejim",
+            "normalPuffs": "",
+            "powerPuffs": "",
+            "price2": "27₼",
+            "warning": "Əlavə olaraq: 18 Yaşı Tamam olmamış şəxslərə satışı yoxdur 🙂"
+        },
+        {
+            "id": 8,
+            "name": "MOSMO GT",
+            "price": "40,000",
+            "image": "8.png",
+            "details": [
+                
+                "Martini içki🍸",
+                "İkiqat alma🍎🍏",
+                "Üzüm nanə🍇🌿",
+                "Ananas Fantaziya🍍",
+                "Limon laym🍋",
+                "Çiyələk Qarpız🍓🍉",
+                "Çiyələk kivi🍓🥝",
+                "Buzlu Qarpız🍉❄️",
+            ],
+            "brand": "MOSMO",
+            "model": "40,000 GT DTL",
+            "nicotine": "0.5%",
+            "modes": "2 Rejim",
+            "normalPuffs": "",
+            "powerPuffs": "",
+            "price2": "31₼",
+            "warning": "Əlavə olaraq: 18 Yaşı Tamam olmamış şəxslərə satışı yoxdur 🙂"
+        },
+        {
+            "id": 9,
+            "name": "YAĞLAR 5%",
+            "price": "",
+            "image": "9.png",
+            "details": [
+                
+                "Yaşıl üzüm roza gülü (elfliq)🍇🌹",
+                "Buzlu Cola (elfliq)🥤❄️",
+                "Buzlu Tütün (elfliq)🚬❄️",
+                "Moruq Qaragilə Nar (elfliq)🫐🍎",
+                "Buzlu Qaragilə (elfliq)🫐❄️",
+                "Şirin Jelibom (elfliq)🍬",
+                "Moruq Jasmin (elfliq)🫐🌸",
+                "Qarpız Vişnə (elfliq)🍉🍒",
+                "İtburnu Qaragilə (elfliq)🌹🫐",
+                "Çiyələk Vişnə Limon (elfliq)🍓🍒🍋",
+                "Buzlu Şaftalı (elfliq)🍑❄️",
+                "Buzlu Çiyələk (elfliq)🍓❄️",
+                "Çiyələk Kivi (elfliq)🍓🥝",
+                "Vişnə🍒",
+                "Nanəli Saqqız (elfliq)🌿🍭",
+                "Buzlu Ananas🍍❄️",
+                "Vişnə Limon Şaftalı (elfliq)🍒🍋🍑",
+                "Sadə Qara üzüm (elfliq)🍇",
+                "Buzlu Qarpız (elfliq)🍉❄️",
+                "Moruq Buz (HQD)🫐❄️",
+                "Şaftalı Buz (HQD)🍑❄️",
+                "Çiyələk Banan Buz (HQD)🍓🍌❄️",
+                "Çiyələk Buz (HQD)🍓❄️",
+                "Buzlu Gilas (HQD)🍒❄️",
+                "Buzlu Banan (HQD)🍌❄️",
+                "Buzlu Qarpız (HQD)🍉❄️"
+            ],
+            "brand": "",
+            "model": "",
+            "nicotine": "",
+            "modes": "",
+            "normalPuffs": "",
+            "powerPuffs": "",
+            "price2": "",
+            "warning": "18 yaşından kiçiklərə satışı qadağandır"
+        },
+        {
+            "id": 10,
+            "name": "VOZOL STAR",
+            "price": "20,000",
+            "image": "10.png",
+            "details": [
+                "Buzlu üzüm qara🍇❄️",
+                "Qaragilə buz🫐❄️",
+                "Qarpız buz🍉❄️",
+                "Çiyələk kivi🍓🥝",
+                "Qarışıq giləmeyvələr🫐🍓",
+                "Çiyələk Mango🍓🥭",
+                "Mango şaftalı buzlu🥭🍑❄️",
+                "İkiqat alma buzlu🍎🍏❄️"
+            ],
+            "brand": "VOZOL",
+            "model": "Star 20,000",
+            "nicotine": "5%",
+            "modes": "2 Rejim Eco Və Power",
+            "economPuffs": "20,000 Tüstüyə Qədər",
+            "powerPuffs": "15,000 Tüstüyə Qədər",
+            "price2": "25₼",
+            "warning": "Əlavə olaraq: 18 Yaşı Tamam olmamış şəxslərə satışı yoxdur 🙂"
+        },
+        {
+            "id": 11,
+            "name": "POD SYSTEM",
+            "price": "",
+            "image": "11.png",
+            "details": [
+            ],
+            "brand": "ARGUS",
+            "model": "Argus G Pod",
+            "nicotine": "Sərbəst",
+            "modes": "12w-18w",
+            "normalPuffs": "",
+            "powerPuffs": "",
+            "price2": "35₼",
+            "warning": "18 yaşından kiçiklərə satışı qadağandır"
+        },
+        {
+            "id": 12,
+            "name": "VOZOL GEAR",
+            "price": "20,000",
+            "image": "12.png",
+            "details": [
+                "Qarışıq Giləmeyvələr🫐🍓"],
+            "brand": "VOZOL",
+            "model": "Gear Power 20,000",
+            "nicotine": "5%",
+            "modes": "2 Rejim Econom Və Power modu",
+            "economPuffs": "20,000 Tüstüyə qədər Çəkim",
+            "powerPuffs": "12,000 Tüstüyə qədər Çəkim",
+            "price2": "28₼",
+            "warning": "Əlavə olaraq: 18 Yaşı Tamam olmamış şəxslərə satışı yoxdur 🙂"
+        }
+    ]
+};
+       
+        // --- State ---
+        let currentIndex = null; // index within products.products array
+
+        // --- Load category / grid ---
+        function loadCategoryPage(){
+            const grid = document.getElementById('productGrid'); grid.innerHTML = '';
+            products.products.forEach((product, idx)=>{
+                const card = document.createElement('div'); card.className = 'product-card';
+                card.onclick = ()=> showDetailByIndex(idx);
+                card.innerHTML = `\n                    <img src="${product.image}" alt="${product.name}" class="product-image">\n                    <div class="product-info">\n                        <div class="product-name">${product.name}</div>\n                        <div class="product-price">${product.price ? product.price : ''}</div>\n                    </div>\n                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // --- Show detail by product id or index ---
+        function showDetailByIndex(index, direction='left'){
+            if(index < 0 || index >= products.products.length) return;
+            const newProduct = products.products[index];
+            const detailPage = document.getElementById('detailPage');
+            const categoryPage = document.getElementById('categoryPage');
+
+            // apply transition classes
+            const content = document.querySelector('.detail-content');
+            const inner = document.createElement('div'); inner.className = 'content-inner';
+            // populate inner content quickly for animation
+            inner.innerHTML = `<!-- transient container -->`;
+
+            // swap visibility
+            categoryPage.style.display = 'none';
+            detailPage.style.display = 'block';
+
+            // update state
+            const prevIndex = currentIndex;
+            currentIndex = index;
+
+            // Title and subtitle
+            const titleEl = document.getElementById('detailTitle');
+            const subEl = document.getElementById('detailSubtitle');
+            titleEl.style.opacity = 0; titleEl.classList.remove('animate-title');
+
+            // flavors
+            const flavorsList = document.getElementById('detailFlavors'); flavorsList.innerHTML = '';
+            newProduct.details.filter(Boolean).forEach((d,i)=>{
+                const li = document.createElement('li'); li.textContent = `${i+1}) ${d}`; li.className = 'animate-info';
+                flavorsList.appendChild(li);
+            });
+
+            // info
+            const infoDiv = document.getElementById('detailInfo'); infoDiv.innerHTML = '';
+            const infoParts = [
+                {k:'Marka', v:newProduct.brand},
+                {k:'Növ', v:newProduct.model},
+                {k:'Nikotin', v:newProduct.nicotine},
+                {k:'Rejimlər', v:newProduct.modes},
+                {k:'Yenilik', v:newProduct.features},
+                {k:'Econom', v:newProduct.economPuffs},
+                {k:'Normal', v:newProduct.normalPuffs},
+                {k:'Power', v:newProduct.powerPuffs},
+                {k:'Qiymət', v:newProduct.price2}
+            ];
+            infoParts.forEach(p=>{ if(p.v){ const div = document.createElement('div'); div.className='info-item'; div.innerHTML = `<span class='info-label'>${p.k}:</span> ${p.v}`; infoDiv.appendChild(div); }});
+
+            // warning
+            document.getElementById('warningText').textContent = newProduct.warning || '';
+
+            // media handling: prefer video if provided, otherwise first image, otherwise placeholder
+            const mediaEl = document.getElementById('detailMedia'); mediaEl.innerHTML = '';
+            const mediaPlaceholder = document.createElement('div'); mediaPlaceholder.id='mediaPlaceholder';
+            if(newProduct.media && newProduct.media.video){
+                const v = document.createElement('video'); v.className='media-video'; v.controls=true; v.src = newProduct.media.video; v.autoplay = false; mediaEl.appendChild(v);
+            } else if(newProduct.media && Array.isArray(newProduct.media.images) && newProduct.media.images.length){
+                const img = document.createElement('img'); img.className='media-img'; img.src = newProduct.media.images[0]; img.alt = newProduct.name; mediaEl.appendChild(img);
+            } else if(newProduct.image){
+                const img = document.createElement('img'); img.className='media-img'; img.src = newProduct.image; img.alt = newProduct.name; mediaEl.appendChild(img);
+            } else {
+                mediaPlaceholder.textContent = 'Məhsul üçün media mövcud deyil'; mediaPlaceholder.style.color='rgba(255,255,255,0.6)'; mediaEl.appendChild(mediaPlaceholder);
+            }
+
+            // animate title and info items staggered
+            setTimeout(()=>{ titleEl.textContent = `${newProduct.name} ${newProduct.price ? '• ' + newProduct.price : '' }`; titleEl.classList.add('animate-title'); document.querySelectorAll('.info-item').forEach((el,i)=>{ el.style.animationDelay = `${0.08 + i*0.06}s`; el.classList.add('animate-info'); }); document.querySelectorAll('.detail-list li').forEach((el,i)=>{ el.style.animationDelay = `${0.08 + i*0.03}s`; el.classList.add('animate-info'); }); }, 40);
+
+            // update nav button enabled state
+            document.getElementById('backBtn').disabled = (index <= 0);
+            document.getElementById('nextBtn').disabled = (index >= products.products.length - 1);
+
+            // keyboard navigation
+            document.onkeydown = function(e){ if(e.key === 'ArrowLeft') navigatePrev(); if(e.key === 'ArrowRight') navigateNext(); if(e.key === 'Escape') navigateHome(); };
+        }
+
+        function showCategory(){ document.getElementById('detailPage').style.display='none'; document.getElementById('categoryPage').style.display='block'; currentIndex=null; }
+
+        // navigation helpers
+        function navigatePrev(){ if(currentIndex === null) return showCategory(); const idx = currentIndex - 1; if(idx >=0) showDetailByIndex(idx, 'right'); else showCategory(); }
+        function navigateNext(){ if(currentIndex === null) return; const idx = currentIndex + 1; if(idx < products.products.length) showDetailByIndex(idx, 'left'); }
+        function navigateHome(){ showCategory(); }
+
+        // alias used by old back button if present in markup
+        function showDetail(id){ const idx = products.products.findIndex(p=>p.id===id); if(idx>=0) showDetailByIndex(idx); }
+
+        // initial load
+        loadCategoryPage();
+
+        // small progressive enhancement: allow clicking card to open and focus
+        // You can expand: swipe gestures, carousel for multiple media, lightbox, etc.
+    </script>
+</body>
+</html>
